@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/lockfile.schema.json",
+  "title": "VibeInfrastructureLockfile",
+  "description": "JSON Schema for Vibe Infrastructure lockfile (vibe.lock) tracking resolved Git commits and dependencies.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "URL referencing this JSON schema."
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of the last synchronization or modification."
+    },
+    "infrastructures": {
+      "type": "object",
+      "description": "Active infrastructure dependencies and their resolved commit states.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["url", "version", "resolvedCommit"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Git repository URL of the AI infra."
+          },
+          "version": {
+            "type": "string",
+            "description": "Target Git Tag, branch, or requested version."
+          },
+          "resolvedCommit": {
+            "type": "string",
+            "description": "Exact Git commit SHA resolved during synchronization."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["updatedAt", "infrastructures"],
+  "additionalProperties": false
+}

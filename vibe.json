@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+  "name": "base",
+  "description": "Base infrastructure repository providing core AI infra configurations and lifecycle protocols.",
+  "includes": [
+    "commands/**/*.md",
+    "prompts/**/*.md"
+  ]
+}

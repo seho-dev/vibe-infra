@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+  "title": "VibeInfrastructureManifest",
+  "description": "JSON Schema for Vibe Infrastructure manifest (vibe.json) supporting both upstream infra definitions and consumer project dependency declarations.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "URL referencing this JSON schema."
+    },
+    "name": {
+      "type": "string",
+      "description": "Identifier name of the AI infra repository.",
+      "pattern": "^[a-zA-Z0-9-_]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of this AI infra repository."
+    },
+    "includes": {
+      "type": "array",
+      "description": "Glob patterns specifying which AI infra configuration files are included for distribution.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "excludes": {
+      "type": "array",
+      "description": "Glob patterns specifying which files are excluded from distribution.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "infrastructures": {
+      "type": "object",
+      "description": "Declared AI infra repository dependencies for consumer projects or derivative infras.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["url", "version"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Git repository URL of the AI infra."
+          },
+          "version": {
+            "type": "string",
+            "description": "Target Git Tag, branch, or commit SHA."
+          },
+          "includes": {
+            "type": "array",
+            "description": "Optional glob patterns to selectively include AI infra configurations from this dependency.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludes": {
+            "type": "array",
+            "description": "Optional glob patterns to exclude certain configurations from this dependency.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "anyOf": [
+    {
+      "required": ["name", "includes"],
+      "description": "Valid upstream infrastructure provider manifest."
+    },
+    {
+      "required": ["infrastructures"],
+      "description": "Valid downstream consumer project manifest."
+    }
+  ],
+  "additionalProperties": false
+}
