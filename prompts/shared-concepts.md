@@ -19,6 +19,9 @@ flowchart LR
 - **Explicit Role Property (`role`)**:
   - `"consumer"`: Identifies a downstream business engineering workspace consuming AI infra packages.
   - `"provider"`: Identifies an infrastructure author repository publishing and distributing Prompts, Skills, and Commands.
+- **Manifest vs. Lockfile Versioning Axiom**:
+  - `vibe.json` defines **tracking intent**: Declared infrastructure dependencies default to `"version": "latest"` to express the user's intent to continuously stay up to date with upstream stable releases. Pinned versions (e.g. `"v1.2.0"`) are used only when the user explicitly requests pinning a fixed tag.
+  - `vibe.lock` records the **immutable resolution state**: Always records the concrete resolved Git Tag in `version` (e.g. `"v1.2.0"`) and the exact commit SHA in `resolvedCommit`.
 - **Selective Sync**: Only files matching upstream `includes` and not filtered by `excludes` are candidates for synchronization.
 - **Strict Blacklist (Never Copy)**: Even if present upstream, the following **MUST NOT** be copied into consumer workspaces:
   - Repository metadata: `README*.md`, `LICENSE`, `CHANGELOG*.md`
@@ -33,7 +36,7 @@ flowchart LR
 > The blacklist against copying `README.md` into the user workspace does **NOT** mean it is ignored. `README.md` is the primary cognitive anchor for the Agent.
 
 1. **Base Infra README Grounding**: Before executing **any** `vibe-*` lifecycle command, the Agent **MUST** fetch and read the Base Infra repository's (`seho-dev/vibe-infra`) `README.md` at its **declared Git Tag** (or resolved latest tag) in `vibe.json`. This instills the Agent with Vibe Infra's operational protocols and mental models.
-2. **Target Infra README Grounding**: When adding or updating any target infrastructure, the Agent **MUST** fetch and read that target repository's `README.md` at its **declared Git Tag**. This grounds the Agent in the domain purpose (e.g., Go microservice standards, design system rules, security policies) to guide semantic interpretation.
+2. **Target Infra README Grounding**: When adding or updating any target infrastructure, the Agent **MUST** fetch and read that target repository's `README.md` at its **resolved Git Tag**. This grounds the Agent in the domain purpose (e.g., Go microservice standards, design system rules, security policies) to guide semantic interpretation.
 3. **Cognition-Only Boundary**: Tagged READMEs are ingested exclusively into Agent working memory (context). They **MUST NOT** be copied, generated, or written to project files.
 
 ---
@@ -98,7 +101,7 @@ flowchart LR
     Trace --> Merge["4. Three-Way Semantic Merge using Cumulative Diff"]
 ```
 
-1. **Tag Interval Discovery**: List all Git Tags in the open-closed range `(currentVersion, targetVersion]`.
+1. **Tag Interval Discovery**: List all Git Tags in the open-closed range `(currentLockedVersion, targetVersion]`.
 2. **Chronological Release Collection**: Sequentially fetch and read GitHub Release Notes and Changelog entries across each intermediate tag in temporal order.
 3. **Deprecation & Arc Synthesis**: Extract intermediate deprecations, behavioral shifts, and migration instructions.
 4. **Cumulative Semantic Merge**: Apply the cumulative `git diff <old-commit>..<target-tag>` informed by this sequential migration context.
@@ -160,7 +163,7 @@ Every command **MUST** conclude with this concise structured report:
 ## 9. Manifest Specifications & Authoring Guide
 
 ### 9.1 Consumer Project Manifest (`role: "consumer"`)
-Placed at project root to declare consumed AI infra dependencies:
+Placed at project root to declare consumed AI infra dependencies. Dependencies default to `"version": "latest"` to express tracking intent:
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
@@ -172,7 +175,7 @@ Placed at project root to declare consumed AI infra dependencies:
     },
     "team-go": {
       "url": "https://github.com/example-org/team-go-infra.git",
-      "version": "v0.2.1",
+      "version": "latest",
       "includes": ["skills/**/*.md"],
       "excludes": ["skills/legacy-*.md"]
     }
@@ -208,7 +211,7 @@ Placed at root of infrastructure repository distributing Prompts, Skills, and Co
 ```
 
 ### 9.3 Semantic Lockfile (`vibe.lock`)
-Automatically maintained by the Agent to record resolved commit SHAs as semantic baselines:
+Automatically maintained by the Agent to record resolved concrete Git Tags and commit SHAs as semantic baselines:
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/lockfile.schema.json",
@@ -218,6 +221,11 @@ Automatically maintained by the Agent to record resolved commit SHAs as semantic
       "url": "https://github.com/seho-dev/vibe-infra",
       "version": "v1.0.0",
       "resolvedCommit": "a1b2c3d4e5f6..."
+    },
+    "team-go": {
+      "url": "https://github.com/example-org/team-go-infra.git",
+      "version": "v0.3.2",
+      "resolvedCommit": "f7e8d9c0b1a2..."
     }
   }
 }

@@ -12,7 +12,7 @@
 
 | 维度 | 传统方式 | vibe-infra 规范方案 |
 | :--- | :--- | :--- |
-| **分发与升级** | 开发者手动复制文件；上游规范更新时存量工程无法同步升级。 | **声明式清单与版本锁定**：在 `vibe.json` 中声明依赖版本，基于 Git Tag 差分升级。 |
+| **分发与升级** | 开发者手动复制文件；上游规范更新时存量工程无法同步升级。 | **声明式清单与版本锁定**：在 `vibe.json` 中声明依赖版本（默认声明 `latest` 追踪意图），在 `vibe.lock` 锁定具体 Commit 与 Tag，基于 Git Tag 差分升级。 |
 | **多宿主适配** | 主流 AI 编程工具原生配置路径各不相同。 | **宿主自适应与双模归位**：自动识别环境（有歧义时主动询问）；消费端归位至宿主目录，提供者平铺直改外层资产。 |
 | **多源冲突** | 传统文件覆盖破坏本地规则，或产生多层嵌套目录。 | **平铺布局与语义融合**：同名规则由 Agent 语义合成，无机器注释模板污染。 |
 | **背景认知** | Agent 面对孤立的规则文件，缺乏对全局设计意图的理解。 | **强制 Tagged README 认知注入**：操作前必读 Base 与目标 Tag 的 `README.md` 建立认知（仅作上下文，不落盘）。 |
@@ -43,8 +43,8 @@ flowchart TD
     end
 
     subgraph LocalProject ["消费端工程 (role: consumer) / 提供者仓库 (role: provider)"]
-        VibeJson["vibe.json (清单声明 role)"]
-        VibeLock["vibe.lock (Commit 锚点)"]
+        VibeJson["vibe.json (清单声明 role 与 tracking intent)"]
+        VibeLock["vibe.lock (锁定 Tag 与 Commit 锚点)"]
         TargetDir["宿主原生目录 / 外层平铺资产"]
     end
 
@@ -77,7 +77,7 @@ flowchart TD
 4. 识别当前工程的 AI 编程工具环境（如 Claude Code 等）；若无法准确判断，主动向我提问确认。
 5. 读取 vibe-infra 的 includes 匹配表达式，将其核心 AI infra 配置（commands/、prompts/ 等）适配并放置到宿主环境对应的原生配置目录下。
 6. 对引入的配置进行供应链安全审查，排查敏感外连与恶意命令。
-7. 在工程根目录下创建 vibe.json，显式声明 role 为 "consumer"，并将 Base Infra 声明为基础依赖并锁定解析到的 Tag，确保默认携带 $schema 字段：
+7. 在工程根目录下创建 vibe.json，显式声明 role 为 "consumer"，并将 Base Infra 声明为基础依赖（默认声明 version: "latest" 表达持续追踪最新版本的意图，由 vibe.lock 记录实际锁定的稳定 Tag 与 commit SHA），确保默认携带 $schema 字段：
    {
      "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
      "role": "consumer",
@@ -88,7 +88,7 @@ flowchart TD
        }
      }
    }
-8. 在工程根目录生成初始的 vibe.lock 文件，记录 resolvedCommit 与当前时间戳，并关联 lockfile.schema.json。
+8. 在工程根目录生成初始的 vibe.lock 文件，记录解析到的稳定 Git Tag（如 version: "v1.0.0"）、resolvedCommit 与当前时间戳，并关联 lockfile.schema.json。
 9. 过程中若遇到任何路径判定、命名冲突或拿不准的问题，严格依据 prompts/shared-concepts.md 主动向我提问确认。
 10. 完成后输出初始化报告，列出已安装的 AI infra 配置、放置路径、安全审计结论与后续步骤。
 ```
@@ -104,7 +104,7 @@ flowchart TD
 2. 解析 https://github.com/seho-dev/vibe-infra 的最新发布 Git Tag（默认解析最新 stable tag）。
 3. 读取 Base Infra 对应 Tag 的 README.md 建立规范认知（严禁复制到工程中）。
 4. 识别宿主 AI 编程工具环境；若无法准确判断，主动向我提问确认。
-5. 在当前仓库根目录创建 vibe.json，显式声明 role 为 "provider"，定义当前仓库 name 与 includes 导出表达式，并将 Base Infra 声明为上游依赖：
+5. 在当前仓库根目录创建 vibe.json，显式声明 role 为 "provider"，定义当前仓库 name 与 includes 导出表达式，并将 Base Infra 声明为上游依赖（默认声明 version: "latest"）：
    {
      "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
      "role": "provider",
@@ -128,7 +128,7 @@ flowchart TD
      }
    }
 6. 执行提供者模式平铺同步：将 Base 提供的核心资产（commands/、prompts/ 等）直接平铺融合在当前仓库根目录外层，供后续打包发布，严禁生成多层嵌套目录。
-7. 在根目录生成初始的 vibe.lock 记录 Base 解析的 commit SHA。
+7. 在根目录生成初始的 vibe.lock 记录 Base 解析的 concrete Tag 与 commit SHA。
 8. 完成后输出初始化报告，列出根目录导出的平铺配置及后续发布建议。
 ```
 
@@ -138,8 +138,8 @@ flowchart TD
 
 | 指令 | 核心动作 | 典型场景 |
 | :--- | :--- | :--- |
-| **`/vibe-add [url]@[tag]`** | 读取目标与 Base Tag README ➔ 审计 ➔ 语义融合 ➔ 记录 Lock | 引入新的 Infra 依赖（例如团队 Go 规约、前端规范）。 |
-| **`/vibe-sync`** | 读取 Base Tag README ➔ 遍历跨版本 Release ➔ 累积 Diff 合并 | 同步上游更新；消费端更新至宿主目录，提供者直接平铺更新至外层。 |
+| **`/vibe-add [url]@[tag]`** | 读取目标与 Base Tag README ➔ 审计 ➔ 语义融合 ➔ 记录 Lock | 引入新的 Infra 依赖（默认写入 `latest` 意图并在 Lock 锁定稳定 Tag，亦支持显式 `@<tag>` 锁定）。 |
+| **`/vibe-sync`** | 读取 Base Tag README ➔ 遍历跨版本 Release ➔ 累积 Diff 合并 | 同步上游更新；对齐 `latest` 最新 Tag 或显式锁定版本，消费端更新至宿主目录，提供者直接平铺更新至外层。 |
 | **`/vibe-remove [name]`** | 读取 Base Tag README ➔ 锚定 Commit 基线 ➔ 语义减法剥离 | 注销指定依赖，安全清理关联配置并保留本地扩展。 |
 
 ---
@@ -149,6 +149,7 @@ flowchart TD
 本规范的所有公理定义、双模归位算法、跨版本时序遍历、配置文件 Schema 及发布指南均在 **[prompts/shared-concepts.md](prompts/shared-concepts.md)** 中标准化定义：
 
 - **清单强制准入与角色定义**：`vibe.json` 与 `role` 声明（`consumer` / `provider`）。
+- **清单意图与版本锁定分离**：`vibe.json` 依赖项默认声明 `"version": "latest"` 表达持续追踪最新发布的意图；而 `vibe.lock` 记录不可篡改的基线快照（精确的 Git Tag 与 Commit SHA）。
 - **Tagged README 认知注入**：操作前必须读取对应 Tag 的 `README.md`，仅载入上下文，严禁落盘。
 - **宿主识别与双模归位**：宿主环境自动识别（有歧义时主动向用户提问）；消费端归位至宿主原生目录，提供者直接平铺修改外层资产。
 - **发布端预融合 (Pre-Fusion)**：上游依赖发布前预融合，消费端只维持单层锁，根治菱形依赖冲突。

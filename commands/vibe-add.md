@@ -19,18 +19,24 @@ flowchart LR
 ## Execution Pipeline
 
 ### Stage 1: Parse Arguments & Register Manifest
-1. Parse user input: `<git-url>` and target `<tag>` (default to latest tag if omitted).
-2. If `vibe.json` does not exist, initialize it ensuring `role` is defined (`"consumer"` for engineering projects, `"provider"` for infra author repositories).
-3. Register or update the dependency entry under `infrastructures` in root `vibe.json` (always preserving `$schema`).
+1. Parse user input: `<git-url>` and optional target `<tag>`.
+2. **Manifest Versioning Policy**:
+   - **Default (`latest`)**: Unless the user explicitly specifies a pinned tag (e.g., `<url>@<tag>`), set `"version": "latest"` in `vibe.json`. This expresses tracking intent, enabling subsequent `/vibe-sync` commands to automatically detect upstream upgrades.
+   - **Explicit Pinning**: If a specific tag is passed, record that pinned `<tag>` in `vibe.json`.
+3. If `vibe.json` does not exist, initialize it ensuring `role` is defined (`"consumer"` for engineering projects, `"provider"` for infra author repositories).
+4. Register or update the dependency entry under `infrastructures` in root `vibe.json` (always preserving `$schema`).
 
 ### Stage 2: Manifest Guardrail & Cognitive Grounding
 1. **Manifest Guardrail**: Verify target upstream contains a root `vibe.json`. If missing, abort immediately.
-2. **Cognitive Grounding (Tagged README Mandate)**:
+2. **Tag Resolution**:
+   - If target version is `"latest"`, query upstream repository to resolve the latest released stable Git Tag.
+   - If target version is explicitly pinned, use that specific Git Tag.
+3. **Cognitive Grounding (Tagged README Mandate)**:
    - Fetch and read the Base Infra repository's (`seho-dev/vibe-infra`) `README.md` at its declared tag (or resolved latest tag) to ground operational mental models.
-   - Fetch and read the target repository's `README.md` at the resolved `<tag>` to ground domain understanding (e.g. Go standards, frontend design rules).
+   - Fetch and read the target repository's `README.md` at the resolved Git Tag to ground domain understanding (e.g. Go standards, frontend design rules).
    *(Note: Tagged READMEs are read into working memory only; never copied to workspace).*
-3. Detect host harness environment (e.g. Claude Code or other mainstream agentic tools). If ambiguous, prompt the user to specify their AI tool as required by `shared-concepts.md`.
-4. Determine workspace mode from `vibe.json` `role`:
+4. Detect host harness environment (e.g. Claude Code or other mainstream agentic tools). If ambiguous, prompt the user to specify their AI tool as required by `shared-concepts.md`.
+5. Determine workspace mode from `vibe.json` `role`:
    - **Consumer Mode (`role: "consumer"`)**: Targeting native harness directories.
    - **Provider Mode (`role: "provider"`)**: Updating outer root assets directly.
 
@@ -43,5 +49,5 @@ flowchart LR
    - **Tooling Adaptation**: Map generic placeholders to actual project commands (`package.json`, `go.mod`).
 
 ### Stage 4: Atomic Lock & Execution Report
-1. Record target version and resolved commit SHA into `vibe.lock`.
-2. Output standard execution report matching the schema in `shared-concepts.md`.
+1. Record the resolved concrete Git Tag in `version` and the resolved commit SHA in `resolvedCommit` into `vibe.lock`.
+2. Output standard execution report matching the schema in `shared-concepts.md`, clarifying manifest intent (`latest` or pinned tag) versus locked resolution.

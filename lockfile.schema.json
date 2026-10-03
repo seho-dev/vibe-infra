@@ -27,7 +27,7 @@
           },
           "version": {
             "type": "string",
-            "description": "Target Git Tag, branch, or requested version."
+            "description": "Concrete resolved Git Tag, branch, or pinned version."
           },
           "resolvedCommit": {
             "type": "string",

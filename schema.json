@@ -50,7 +50,7 @@
           },
           "version": {
             "type": "string",
-            "description": "Target Git Tag, branch, or commit SHA."
+            "description": "Target tracking version ('latest' by default to continuously track upstream releases) or explicitly pinned Git Tag, branch, or commit SHA."
           },
           "includes": {
             "type": "array",

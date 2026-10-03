@@ -1,18 +1,18 @@
 # vibe-infra
 
-> **An Agent-Native Specification for Versioning, Distributing, and Fusing AI Infrastructure (Prompts, Skills, Commands)**
+> **Agent-Native Version Management and Flat Fusion Standard for AI Infrastructure (Prompts, Skills, Commands)**
 >
 > [中文文档](README.zh-CN.md) | **English Documentation**
 
 ---
 
-## Technical Comparison
+## Problems Solved
 
-Managing decentralized Prompts, Skills, Commands, and Agent rules across projects introduces distribution challenges, harness divergence, and configuration conflicts:
+In collaborative engineering, scattered Prompts, Skills, Commands, and Agent rules suffer from distribution friction, divergent host environments, and guideline conflicts:
 
 | Dimension | Traditional Approach | vibe-infra Specification |
 | :--- | :--- | :--- |
-| **Distribution & Sync** | Manual file copying; upstream guideline updates leave consumer repos out of sync. | **Declarative Manifest & Version Locking**: Dependencies declared in `vibe.json`; diff-upgrades executed via Git Tags. |
+| **Distribution & Sync** | Manual file copying; upstream guideline updates leave consumer repos out of sync. | **Declarative Manifest & Version Locking**: Dependencies declared in `vibe.json` (defaulting to `latest` tracking intent); concrete tags and commits locked in `vibe.lock`; diff-upgrades executed via Git Tags. |
 | **Harness Adaptation** | Mainstream AI programming tools maintain divergent configuration paths. | **Harness Adaptation & Dual-Mode Placement**: Identifies environment (queries user if ambiguous); consumer projects adapt to harness paths while infra repos edit outer flat assets directly. |
 | **Collision Resolution** | File overwriting breaks local rules or produces deeply nested directory trees. | **Flat Layout & Semantic Fusion**: Synthesizes identically named rules semantically without machine template pollution. |
 | **Agent Context Awareness** | Agent inspects isolated Markdown snippets without understanding overall architectural intent. | **Mandatory Tagged README Ingestion**: Reads Base and target Tag `README.md` before execution (working memory only; never copied). |
@@ -43,9 +43,9 @@ flowchart TD
     end
 
     subgraph LocalProject ["Consumer Project (role: consumer) / Provider Repo (role: provider)"]
-        VibeJson["vibe.json (Manifest declaring role)"]
-        VibeLock["vibe.lock (Commit Baseline Anchor)"]
-        TargetDir["Harness Directory / Outer Flat Assets"]
+        VibeJson["vibe.json (Manifest declares role & tracking intent)"]
+        VibeLock["vibe.lock (Pinned Tag & Commit Anchors)"]
+        TargetDir["Harness Native Dirs / Flat Outer Assets"]
     end
 
     BaseInfra -->|"Tag / README"| Context
@@ -56,17 +56,17 @@ flowchart TD
     HarnessDetect --> SemanticMerge
     SemanticMerge --> LockGen
     LockGen -->|"Update Lock"| VibeLock
-    LockGen -->|"Register Dep"| VibeJson
-    SemanticMerge -->|"Write Rules"| TargetDir
+    LockGen -->|"Declare Deps"| VibeJson
+    SemanticMerge -->|"Write Assets"| TargetDir
 ```
 
 ---
 
-## Quickstart
+## Quick Start
 
 ### 1. Consumer Project Initialization (Consumer Onboarding)
 
-When introducing and consuming upstream AI Infra guidelines into standard projects, send this prompt to an active AI Agent (Claude Code or other mainstream agentic tools):
+To consume upstream AI Infra guidelines in a downstream business engineering repository, prompt Claude Code or any mainstream AI tool with:
 
 ```markdown
 Please read and follow the specification at https://github.com/seho-dev/vibe-infra to initialize vibe-infra as the Base Infrastructure for this consumer project:
@@ -76,7 +76,7 @@ Please read and follow the specification at https://github.com/seho-dev/vibe-inf
 3. Read and understand the Base Infra's README.md at that tag to ground understanding of vibe-infra conventions (Note: read for cognitive context only; never copy into workspace).
 4. Detect the current project's AI host harness environment (e.g., Claude Code); if ambiguous, prompt me to confirm.
 5. Fetch the AI infra configurations matching vibe-infra's includes expressions (commands/, prompts/, etc.) and adapt them into the appropriate native harness directories.
-6. Create a `vibe.json` file in the project root explicitly declaring `role` as "consumer" and Base Infrastructure pinned to the resolved tag, ensuring `$schema` is included:
+6. Create a `vibe.json` file in the project root explicitly declaring `role` as "consumer" and Base Infrastructure tracking intent (defaulting to `version: "latest"`, with resolved stable tag and commit SHA locked in `vibe.lock`), ensuring `$schema` is included:
    {
      "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
      "role": "consumer",
@@ -87,7 +87,7 @@ Please read and follow the specification at https://github.com/seho-dev/vibe-inf
        }
      }
    }
-7. Generate the initial `vibe.lock` file in the project root recording the resolvedCommit and current timestamp, referencing lockfile.schema.json.
+7. Generate the initial `vibe.lock` file in the project root recording the resolved Git Tag (e.g., `version: "v1.0.0"`), resolvedCommit, and current timestamp, referencing lockfile.schema.json.
 8. Conduct a supply-chain security audit on imported templates and commands.
 9. If any naming conflicts, path ambiguities, or questions arise, actively ask for clarification as per prompts/shared-concepts.md.
 10. Provide an initialization report summarizing the installed AI infra configurations, configuration paths, security audit outcomes, and next steps.
@@ -104,7 +104,7 @@ Please read and follow the specification at https://github.com/seho-dev/vibe-inf
 2. Resolve the latest released stable Git Tag from https://github.com/seho-dev/vibe-infra.
 3. Read the Base Infra README.md at that tag for cognitive grounding (never copy into workspace).
 4. Detect the host AI programming harness; if ambiguous, prompt me to confirm.
-5. Create a `vibe.json` file in the repository root explicitly declaring `role` as "provider", defining repository `name` and exported `includes` patterns, and declaring Base Infra as upstream:
+5. Create a `vibe.json` file in the repository root explicitly declaring `role` as "provider", defining repository `name` and exported `includes` patterns, and declaring Base Infra as upstream (defaulting to `version: "latest"`):
    {
      "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
      "role": "provider",
@@ -128,7 +128,7 @@ Please read and follow the specification at https://github.com/seho-dev/vibe-inf
      }
    }
 6. Perform provider flat pre-fusion: place Base distribution assets (commands/, prompts/, etc.) directly flat at the repository root for distribution, avoiding synthetic subfolders.
-7. Generate initial `vibe.lock` recording Base's resolved commit SHA.
+7. Generate initial `vibe.lock` recording Base's concrete resolved tag and commit SHA.
 8. Output an initialization report summarizing the exported root assets and release guidelines.
 ```
 
@@ -138,8 +138,8 @@ Once initialized, the following commands manage the infrastructure lifecycle:
 
 | Command | Action | Scenario |
 | :--- | :--- | :--- |
-| **`/vibe-add [url]@[tag]`** | Read Target & Base Tag READMEs ➔ Audit ➔ Semantic Fusion ➔ Update Lock | Introduce a new infrastructure dependency. |
-| **`/vibe-sync`** | Read Base Tag README ➔ Sequential Release Traversal ➔ Cumulative Diff Merge | Synchronize upstream updates; updates harness paths in consumer mode, flat root assets in provider mode. |
+| **`/vibe-add [url]@[tag]`** | Read Target & Base Tag READMEs ➔ Audit ➔ Semantic Fusion ➔ Update Lock | Introduce a new infrastructure dependency (declares `latest` tracking intent by default, locking resolved tag in Lock; supports explicit `@<tag>` pinning). |
+| **`/vibe-sync`** | Read Base Tag README ➔ Sequential Release Traversal ➔ Cumulative Diff Merge | Synchronize upstream updates; aligns to `latest` releases or pinned tags, updating harness paths in consumer mode, flat root assets in provider mode. |
 | **`/vibe-remove [name]`** | Read Base Tag README ➔ Reference Commit Baseline ➔ Semantic Subtraction | Deregister dependency, safely pruning related clauses while preserving local edits. |
 
 ---
@@ -149,6 +149,7 @@ Once initialized, the following commands manage the infrastructure lifecycle:
 All normative axioms, dual-mode placement mechanics, sequential traversal protocols, schema specifications, and publishing guides are standardized in **[prompts/shared-concepts.md](prompts/shared-concepts.md)**:
 
 - **Manifest Gatekeeper & Roles**: Strict `vibe.json` enforcement with explicit `role` declaration (`consumer` / `provider`).
+- **Manifest Intent vs. Lockfile Baseline**: `vibe.json` entries default to `"version": "latest"` expressing continuous tracking intent, while `vibe.lock` stores immutable resolution snapshots (concrete Git Tag and commit SHA).
 - **Cognitive Context Mandate**: Ingesting Tagged `README.md` into Agent memory before execution (never copied).
 - **Harness Resolution & Dual-Mode Placement**: Environment detection (queries user if ambiguous); consumer projects adapt to harness paths while infra repos edit outer flat assets directly.
 - **Publishing Pre-Fusion**: Flattened distribution eliminates transitive diamond dependency hell.
