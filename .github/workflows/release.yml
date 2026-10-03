@@ -6,7 +6,7 @@ on:
       dry_run:
         description: Preview version and Release Notes only, not actually released
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
