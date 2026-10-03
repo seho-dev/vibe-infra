@@ -13,10 +13,10 @@ Managing decentralized Prompts, Skills, Commands, and Agent rules across project
 | Dimension | Traditional Approach | vibe-infra Specification |
 | :--- | :--- | :--- |
 | **Distribution & Sync** | Manual file copying; upstream guideline updates leave consumer repos out of sync. | **Declarative Manifest & Version Locking**: Dependencies declared in `vibe.json`; diff-upgrades executed via Git Tags. |
-| **Harness Compatibility** | Claude Code (`.claude/`), Cursor (`.cursor/`), OpenCode (`.agents/`) paths are divergent. | **Harness-Aware Adaptation**: Automatically identifies the host harness and routes assets to native paths. |
+| **Harness Adaptation** | Mainstream AI programming tools (such as Claude Code) maintain divergent configuration paths. | **Harness Adaptation & Dual-Mode Placement**: Identifies environment (queries user if ambiguous); consumer projects adapt to harness paths while infra repos edit outer flat assets directly. |
 | **Collision Resolution** | File overwriting breaks local rules or produces deeply nested directory trees. | **Flat Layout & Semantic Fusion**: Synthesizes identically named rules semantically without machine template pollution. |
 | **Agent Context Awareness** | Agent inspects isolated Markdown snippets without understanding overall architectural intent. | **Mandatory Tagged README Ingestion**: Reads Base and target Tag `README.md` before execution (working memory only; never copied). |
-| **Multi-Version Upgrades** | Upgrades skipping versions (`v1.0.0 -> v1.3.0`) evaluate only end-to-end diffs, missing deprecation notices. | **Sequential Release Log Ingestion**: Traverses intermediate tags, sequentially processing Release Notes and Changelogs. |
+| **Multi-Version Upgrades** | Upgrades skipping versions evaluate only end-to-end diffs, missing deprecation notices. | **Sequential Release Log Ingestion**: Traverses intermediate tags, sequentially processing Release Notes and Changelogs. |
 | **Deprecation & Cleanup** | Pruning standards risks deleting local modifications or leaving dead instructions. | **Semantic Subtraction**: References the commit baseline recorded in `vibe.lock` to prune equivalent clauses while retaining local edits. |
 | **Security Auditing** | Arbitrary prompt imports carry risks of credential harvesting or script injection. | **Pre-Merge Supply Chain Audit**: Static inspection flags sensitive credential access, destructive commands, or outbound calls. |
 
@@ -37,15 +37,15 @@ flowchart TD
         Context["1. Context Ingestion: Read Base & Target Tag README.md"]
         Verify["2. Manifest Validation & Sequential Release Notes Traversal"]
         Audit["3. Supply Chain Security Audit (Pre-Merge Inspection)"]
-        HarnessDetect["4. Harness Detection (.claude / .cursor / .agents)"]
+        HarnessDetect["4. Harness Detection (Prompt user if ambiguous)"]
         SemanticMerge["5. Flat Semantic Fusion (Local Intent Priority)"]
         LockGen["6. Update Semantic Lockfile (vibe.lock)"]
     end
 
-    subgraph LocalProject ["Consumer Project Workspace"]
+    subgraph LocalProject ["Consumer Project / Infra Repository"]
         VibeJson["vibe.json (Dependency Manifest)"]
         VibeLock["vibe.lock (Commit Baseline Anchor)"]
-        TargetDir["Native Harness Paths (.cursor/ / .claude/ / .agents/)"]
+        TargetDir["Harness Directory / Outer Flat Assets"]
     end
 
     BaseInfra -->|"Tag / README"| Context
@@ -66,15 +66,15 @@ flowchart TD
 
 ### 1. Project Initialization
 
-Provide the following prompt to an active AI Agent (Claude Code, Cursor, OpenCode, etc.) in the project root:
+Provide the following prompt to an active AI Agent (Claude Code or other mainstream agentic tools) in the project root:
 
 ```markdown
 Please read and follow the specification at https://github.com/seho-dev/vibe-infra to initialize vibe-infra as the Base Infrastructure for this project:
 
 1. Verify that https://github.com/seho-dev/vibe-infra contains a valid root vibe.json manifest.
-2. Resolve the latest released Git Tag from https://github.com/seho-dev/vibe-infra (e.g., v1.0.0).
+2. Resolve the latest released stable Git Tag from https://github.com/seho-dev/vibe-infra.
 3. Read and understand the Base Infra's README.md at that tag to ground understanding of vibe-infra conventions (Note: read for cognitive context only; never copy into workspace).
-4. Detect the current project's AI host harness and its native configuration paths according to prompts/shared-concepts.md (e.g., Claude Code: .claude/, Cursor: .cursor/, OpenCode: .agents/).
+4. Detect the current project's AI host harness environment (e.g., Claude Code); if ambiguous, prompt me to confirm.
 5. Fetch the AI infra configurations matching vibe-infra's includes expressions (commands/, prompts/, etc.) and adapt them into the appropriate native harness directories.
 6. Create a `vibe.json` file in the project root declaring the Base Infrastructure pinned to the resolved tag, ensuring the `$schema` field is always included:
    {
@@ -82,7 +82,7 @@ Please read and follow the specification at https://github.com/seho-dev/vibe-inf
      "infrastructures": {
        "base": {
          "url": "https://github.com/seho-dev/vibe-infra",
-         "version": "v1.0.0"
+         "version": "latest"
        }
      }
    }
@@ -112,7 +112,8 @@ All command executions strictly adhere to the standards formulated in **[prompts
 | :--- | :--- | :--- |
 | **Manifest Gatekeeper** | Target repositories must provide a root `vibe.json`. | Missing manifests trigger immediate abortion; prevents arbitrary repository scraping. |
 | **Tagged README Ingestion** | Ingest Base and target repository `README.md` at declared Tag before execution. | Ingested into Agent working memory for context only; **never** copied into workspace files. |
-| **Harness-Aware Placement** | Automatically map assets to `.claude/`, `.cursor/`, or `.agents/`. | Assets sit flatly in native harness paths; deeply nested directories are prohibited. |
+| **Harness Resolution & Inquiry** | Automatically detects mainstream harnesses; queries user if ambiguous. | Eliminates guesswork; guarantees files land in canonical directories. |
+| **Dual-Mode Placement** | Consumers map to harness folders; Infra authors edit outer flat assets directly. | Infra authors run harness commands to maintain root assets flatly without synthetic folder nesting. |
 | **Clean Markdown** | Documents must not contain synthetic machine markers (e.g., `<!-- vibe -->`). | Markdown remains standard human-readable text without source contamination. |
 | **Publishing Pre-Fusion** | Derivative infras pre-fuse upstream rules; consumers maintain **direct-only lock**. | Eliminates runtime transitive dependency trees and diamond dependency conflicts. |
 | **Sequential Release Traversal** | Traverse intermediate tags during multi-version upgrades to ingest Release Notes. | Systematically identifies deprecations and breaking changes across intermediate versions. |
@@ -131,7 +132,7 @@ All command executions strictly adhere to the standards formulated in **[prompts
   "infrastructures": {
     "base": {
       "url": "https://github.com/seho-dev/vibe-infra",
-      "version": "v1.0.0"
+      "version": "latest"
     },
     "team-go": {
       "url": "https://github.com/example-org/team-go-infra.git",
@@ -164,7 +165,7 @@ Records resolved commit SHAs as semantic baselines without hash lists:
 ## Authoring & Publishing an Infra Repository
 
 1. **Define Root Manifest (`vibe.json`)**: Declare repository identity and `includes` / `excludes`.
-2. **Pre-Fuse Upstream (Optional)**: If extending `base`, declare it and run `/vibe-sync` before release tagging.
+2. **Pre-Fuse Upstream (Optional)**: If extending `base`, declare it and run `/vibe-sync` before release tagging. The Agent reads and updates root flat assets directly.
 3. **Publish Git Tag**: `git tag v1.0.0 && git push origin v1.0.0`.
 4. **Publish GitHub Release (Recommended)**: Provide Release Notes to guide downstream semantic merges.
 

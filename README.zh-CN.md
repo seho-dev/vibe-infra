@@ -13,10 +13,10 @@
 | 场景维度 | 传统方式 | vibe-infra 规范方案 |
 | :--- | :--- | :--- |
 | **规则分发与同步** | 开发者手动复制文件；上游规范更新时存量工程无法同步升级。 | **声明式清单与版本锁定**：在 `vibe.json` 中声明依赖版本，基于 Git Tag 差分升级。 |
-| **多宿主环境适配** | Claude Code（`.claude/`）、Cursor（`.cursor/`）、OpenCode（`.agents/`）路径互不兼容。 | **宿主环境自适应**：自动识别宿主环境，将资产对齐映射至对应原生目录。 |
+| **多宿主环境适配** | 主流 AI 编程工具（如 Claude Code 等）原生配置路径各不相同。 | **宿主自适应与双模归位**：自动识别环境（无法确认时主动向用户询问）；消费端归位至宿主目录，Infra 提供者平铺直改外层资产。 |
 | **同名与多源冲突** | 传统文件覆盖破坏本地规则，或产生多层嵌套目录。 | **平铺布局与语义融合**：同名规则由 Agent 语义合成，无机器注释模板污染。 |
 | **Agent 背景认知** | Agent 面对孤立的 Markdown 规则文件，缺乏对全局设计意图的理解。 | **强制 Tagged README 认知注入**：操作前必须读取 Base 与目标 Tag 的 `README.md` 建立认知（仅作为上下文，不落盘）。 |
-| **跨多版本升级** | 跨版本升级（如 `v1.0.0 -> v1.3.0`）仅比对两端 Diff，遗漏中间版本的废弃说明与迁移指导。 | **时序发布日志串联摄取**：遍历区间内所有 Tag，串联 Release Notes 与 Changelog 演进时序。 |
+| **跨多版本升级** | 跨版本升级仅比对两端 Diff，遗漏中间版本的废弃说明与迁移指导。 | **时序发布日志串联摄取**：遍历区间内所有 Tag，串联 Release Notes 与 Changelog 演进时序。 |
 | **依赖注销与清理** | 废弃规范时无法区分上游段落与本地修改，易误删或残留无效规则。 | **语义减法**：基于 `vibe.lock` 记录的 Commit 锚点，精准剥离等价段落，保留本地定制。 |
 | **配置安全性** | 引入未知规则存在凭证索取或恶意脚本隐患。 | **供应链安全前置审查**：接入与升级时静态扫描敏感凭据访问、越权外连与危险 Shell 指令。 |
 
@@ -37,15 +37,15 @@ flowchart TD
         Context["1. 认知注入: 读取 Base 与目标 Tag 的 README.md"]
         Verify["2. 清单校验与跨版本 Release Notes 时序梳理"]
         Audit["3. 供应链安全前置审查 (防越权与敏感外发)"]
-        HarnessDetect["4. 宿主环境识别 (.claude / .cursor / .agents)"]
+        HarnessDetect["4. 宿主环境识别 (无法确认时主动向用户询问)"]
         SemanticMerge["5. 扁平化语义融合 (本地业务意图绝对优先)"]
         LockGen["6. 生成/更新极简语义锁 (vibe.lock)"]
     end
 
-    subgraph LocalProject ["消费端本地工程"]
+    subgraph LocalProject ["消费端本地工程 / Infra 仓库"]
         VibeJson["vibe.json (依赖清单)"]
         VibeLock["vibe.lock (Commit 锚点)"]
-        TargetDir["原生配置路径 (.cursor/ / .claude/ / .agents/)"]
+        TargetDir["宿主原生目录 / 外层平铺资产"]
     end
 
     BaseInfra -->|"Tag / README"| Context
@@ -66,15 +66,15 @@ flowchart TD
 
 ### 1. 工程初始化
 
-在支持的 AI Agent（Claude Code、Cursor、OpenCode 等）中发送以下引导提示词：
+在 Claude Code 等主流 AI 编程工具中发送以下引导提示词：
 
 ```markdown
 请阅读并按照 https://github.com/seho-dev/vibe-infra 的规范，将 vibe-infra 作为 Base Infra 初始化到当前工程中：
 
 1. 确认 https://github.com/seho-dev/vibe-infra 根目录存在合法的 vibe.json 清单文件。
-2. 解析 https://github.com/seho-dev/vibe-infra 的最新发布 Git Tag（例如 v1.0.0）。
+2. 解析 https://github.com/seho-dev/vibe-infra 的最新发布 Git Tag（若无固定 Tag 则默认解析最新发布的 stable tag）。
 3. 读取并理解 Base Infra 对应 Tag 的 README.md，明确 vibe-infra 的定位、规范与运行机制（注意：README 仅作为背景认知输入，严禁复制到工程中）。
-4. 识别当前工程的 AI 宿主环境，并依据 prompts/shared-concepts.md 确定原生配置路径（例如 Claude Code: .claude/，Cursor: .cursor/，OpenCode: .agents/）。
+4. 识别当前工程的 AI 编程工具环境（如 Claude Code 等）；若无法准确判断，主动向我提问确认。
 5. 读取 vibe-infra 的 includes 匹配表达式，将其核心 AI infra 配置（commands/、prompts/ 等）适配并放置到正确的原生配置目录下。
 6. 对引入的配置进行供应链安全审查，排查敏感外连与恶意命令。
 7. 在工程根目录下创建 vibe.json，将 Base Infra 声明为基础依赖并锁定解析到的 Tag，确保默认携带 $schema 字段：
@@ -83,7 +83,7 @@ flowchart TD
      "infrastructures": {
        "base": {
          "url": "https://github.com/seho-dev/vibe-infra",
-         "version": "v1.0.0"
+         "version": "latest"
        }
      }
    }
@@ -112,7 +112,8 @@ flowchart TD
 | :--- | :--- | :--- |
 | **清单准入 (Manifest Gatekeeper)** | 目标仓库根目录必须提供有效的 `vibe.json`。 | 缺少清单则强制终止操作，杜绝非法仓库抓取。 |
 | **Tagged README 认知注入** | 操作前必须读取 Base 与目标仓库在对应 Tag 下的 `README.md`。 | 仅载入 Agent 上下文用于语义理解，**严禁**复制或写入至工程目录。 |
-| **宿主路径映射 (Harness Placement)** | 依据 `.claude/`、`.cursor/`、`.agents/` 自动识别归位。 | 资产平铺对齐至原生路径，严禁生成深层嵌套目录。 |
+| **宿主识别与主动提问** | 自动识别主流工具环境；无法确定或存在歧义时强制向用户提问。 | 严禁盲目猜测路径；确保配置落入正确的合规路径。 |
+| **双模归位 (Dual-Mode Placement)** | 消费端归位至宿主目录；Infra 提供者平铺维护外层资产。 | 提供者通过宿主中的指令直接读改根目录的平铺资产，避免多层嵌套。 |
 | **纯文本规范 (Clean Markdown)** | Markdown 文档内严禁包含机器模板标记（如 `<!-- vibe -->`）。 | 保持标准的纯自然语言 Markdown，不污染源码。 |
 | **发布端预融合 (Pre-Fusion)** | 上游扩展依赖在自身仓库完成预融合，消费端仅维护**单层锁**。 | 消除传统依赖管理的菱形依赖冲突与多层传递解析。 |
 | **跨版本日志时序串联** | 跨版本升级时遍历区间内所有 Tag，串联 Release Notes。 | 显式跟踪中间版本声明的废弃项与破坏性变更。 |
@@ -131,7 +132,7 @@ flowchart TD
   "infrastructures": {
     "base": {
       "url": "https://github.com/seho-dev/vibe-infra",
-      "version": "v1.0.0"
+      "version": "latest"
     },
     "team-go": {
       "url": "https://github.com/example-org/team-go-infra.git",
@@ -164,7 +165,7 @@ flowchart TD
 ## Infra 仓库发布指南
 
 1. **配置清单 `vibe.json`**：在仓库根目录声明身份标识及 `includes` / `excludes`。
-2. **上游预融合（可选）**：若继承了基础 Infra，声明依赖后在发布前运行 `/vibe-sync` 平铺融合。
+2. **上游预融合（可选）**：若继承了基础 Infra，声明依赖后在发布前运行 `/vibe-sync` 平铺融合。此时 Agent 会直接读取并修改仓库根目录的平铺资产。
 3. **推送版本 Tag**：`git tag v1.0.0 && git push origin v1.0.0`。
 4. **发布 GitHub Release（推荐）**：编写 Release Notes，便于下游升级时进行时序语义推导。
 

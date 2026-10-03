@@ -27,24 +27,42 @@ flowchart LR
 > [!IMPORTANT]
 > The blacklist against copying `README.md` into the user workspace does **NOT** mean it is ignored. `README.md` is the primary cognitive anchor for the Agent.
 
-1. **Base Infra README Grounding**: Before executing **any** `vibe-*` lifecycle command, the Agent **MUST** fetch and read the Base Infra repository's (`seho-dev/vibe-infra`) `README.md` at its **declared Git Tag** in `vibe.json`. This instills the Agent with Vibe Infra's operational protocols and mental models.
+1. **Base Infra README Grounding**: Before executing **any** `vibe-*` lifecycle command, the Agent **MUST** fetch and read the Base Infra repository's (`seho-dev/vibe-infra`) `README.md` at its **declared Git Tag** (or resolved latest tag) in `vibe.json`. This instills the Agent with Vibe Infra's operational protocols and mental models.
 2. **Target Infra README Grounding**: When adding or updating any target infrastructure, the Agent **MUST** fetch and read that target repository's `README.md` at its **declared Git Tag**. This grounds the Agent in the domain purpose (e.g., Go microservice standards, design system rules, security policies) to guide semantic interpretation.
 3. **Cognition-Only Boundary**: Tagged READMEs are ingested exclusively into Agent working memory (context). They **MUST NOT** be copied, generated, or written to project files.
 
 ---
 
-## 3. Harness-Aware Placement & Flat Organization
+## 3. Harness Resolution & Dual-Mode Placement
 
-The Agent **MUST** detect the host environment and map assets into native harness paths:
+### 3.1 Host Harness Resolution (Ask When Ambiguous)
+Mainstream AI programming harnesses (such as Claude Code and other agentic environments) maintain designated native configuration directories.
+1. **Automatic Detection**: The Agent inspects workspace markers (e.g. `.claude/` for Claude Code) to determine canonical paths.
+2. **Mandatory User Inquiry When Ambiguous**: If the host harness cannot be determined automatically or multiple candidates coexist, the Agent **MUST NOT guess**. It **MUST** pause and prompt the user to specify their AI programming harness tool:
+   ```markdown
+   > [!IMPORTANT]
+   > **Harness Resolution Required**: Unable to unambiguously determine the active AI programming harness.
+   > **Question**: Which AI programming tool or harness is being used in this workspace?
+   > **Options**:
+   > 1. Claude Code (`.claude/`)
+   > 2. Other / Custom (Prompt user to specify directory)
+   ```
 
-| Harness Environment | Detection Indicator | Commands Path | Skills Path | Prompts Path | Global Rules Path |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Claude Code** | `.claude/` present | `.claude/commands/` | `.claude/skills/` | `.claude/prompts/` | `AGENTS.md` / `CLAUDE.md` |
-| **Cursor** | `.cursor/` present | `.cursor/rules/` | `.cursor/rules/` | `.cursor/rules/` | `.cursorrules` / `.cursor/rules/` |
-| **OpenCode / Agentic CLI** | `.agents/` present | `.agents/commands/` | `.agents/skills/` | `.agents/prompts/` | `AGENTS.md` |
-| **Generic / Unknown** | Default fallback | `commands/` | `skills/` | `prompts/` | `AGENTS.md` |
+### 3.2 Dual-Mode Placement (Consumer Project vs. Infra Repository)
+Depending on workspace identity, the Agent operates in one of two modes:
 
-- **Zero Folder Nesting**: Modular assets **MUST** sit flatly under native harness directories (e.g., `.claude/skills/refactor.md`, never `.claude/skills/team-infra/refactor.md`).
+```mermaid
+flowchart TD
+    Mode{"Workspace Role?"}
+    Mode -- "Consumer Project" --> C1["Route assets into host harness native directories (.claude/...)"]
+    Mode -- "Infra Author / Repo" --> C2["Use host harness commands to read/modify flat root assets directly (commands/, prompts/, skills/)"]
+```
+
+- **Consumer Project Mode**: AI infra assets from upstreams are mapped and placed directly into the native directory of the host harness (e.g. `.claude/commands/`, `.claude/skills/`).
+- **Infra Repository Mode (Authoring / Pre-Fusion)**:
+  - An Infra repository defines its distribution assets flatly at root (e.g. `commands/`, `skills/`, `prompts/`).
+  - When an infra author extends `base` or fuses upstream capabilities via their host harness, the host harness's active commands/skills read and modify the **outer flat assets directly** (e.g. editing root `commands/` or `prompts/`).
+  - **Zero Synthetic Nesting**: Assets remain flatly structured at root without artificial folders (e.g. `skills/refactor.md`, never `skills/base/refactor.md`).
 - **Zero Format Pollution**: Markdown files **MUST NOT** contain machine template comments or delimiters (e.g., `<!-- vibe-start -->`). Files remain 100% natural Markdown.
 - **Homonymous Fusion**: When multiple sources provide identically named assets, the Agent synthesizes them into a single coherent document.
 

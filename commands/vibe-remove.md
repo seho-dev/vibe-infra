@@ -21,9 +21,10 @@ flowchart LR
 ### Stage 1: Validate State & Retrieve Baseline
 1. Read `vibe.json` and `vibe.lock`.
 2. Locate `<infra-name>` and retrieve its `resolvedCommit` to establish the reference baseline.
+3. Detect host harness environment. If ambiguous, prompt the user to specify their AI tool. Determine workspace mode (Consumer vs. Infra Author).
 
 ### Stage 2: Mandatory Cognitive Grounding
-1. Fetch and read Base Infra (`seho-dev/vibe-infra`) `README.md` at its pinned tag to ground semantic subtraction rules.
+1. Fetch and read Base Infra (`seho-dev/vibe-infra`) `README.md` at its declared tag (or resolved latest tag) to ground semantic subtraction rules.
 2. Fetch and read target `<infra-name>`'s `README.md` at `resolvedCommit` to understand what guidelines and assets were originally contributed.
 *(Note: Tagged READMEs are read into working memory only; never copied to workspace).*
 
