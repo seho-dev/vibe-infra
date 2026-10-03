@@ -9,9 +9,14 @@
       "type": "string",
       "description": "URL referencing this JSON schema."
     },
+    "role": {
+      "type": "string",
+      "enum": ["consumer", "provider"],
+      "description": "Role of the current repository workspace: 'consumer' for end-user engineering projects consuming AI infra dependencies, 'provider' for infrastructure author repositories distributing Prompts, Skills, and Commands."
+    },
     "name": {
       "type": "string",
-      "description": "Identifier name of the AI infra repository.",
+      "description": "Identifier name of the AI infra repository (required when role is 'provider').",
       "pattern": "^[a-zA-Z0-9-_]+$"
     },
     "description": {
@@ -20,7 +25,7 @@
     },
     "includes": {
       "type": "array",
-      "description": "Glob patterns specifying which AI infra configuration files are included for distribution.",
+      "description": "Glob patterns specifying which AI infra configuration files are included for distribution (used when role is 'provider').",
       "items": {
         "type": "string"
       }
@@ -34,7 +39,7 @@
     },
     "infrastructures": {
       "type": "object",
-      "description": "Declared AI infra repository dependencies for consumer projects or derivative infras.",
+      "description": "Declared AI infra repository dependencies for consumer projects or derivative provider infras.",
       "additionalProperties": {
         "type": "object",
         "required": ["url", "version"],
@@ -68,12 +73,33 @@
   },
   "anyOf": [
     {
-      "required": ["name", "includes"],
-      "description": "Valid upstream infrastructure provider manifest."
+      "properties": {
+        "role": { "const": "provider" }
+      },
+      "required": ["role", "name", "includes"],
+      "description": "Valid infrastructure provider manifest."
     },
     {
-      "required": ["infrastructures"],
+      "properties": {
+        "role": { "const": "consumer" }
+      },
+      "required": ["role", "infrastructures"],
       "description": "Valid downstream consumer project manifest."
+    },
+    {
+      "not": {
+        "required": ["role"]
+      },
+      "anyOf": [
+        {
+          "required": ["name", "includes"],
+          "description": "Backwards-compatible infrastructure provider manifest without explicit role."
+        },
+        {
+          "required": ["infrastructures"],
+          "description": "Backwards-compatible consumer project manifest without explicit role."
+        }
+      ]
     }
   ],
   "additionalProperties": false

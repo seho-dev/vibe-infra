@@ -42,8 +42,8 @@ flowchart TD
         LockGen["6. 生成/更新极简语义锁 (vibe.lock)"]
     end
 
-    subgraph LocalProject ["消费端本地工程 / Infra 仓库"]
-        VibeJson["vibe.json (依赖清单)"]
+    subgraph LocalProject ["消费端工程 (role: consumer) / 提供者仓库 (role: provider)"]
+        VibeJson["vibe.json (清单声明 role)"]
         VibeLock["vibe.lock (Commit 锚点)"]
         TargetDir["宿主原生目录 / 外层平铺资产"]
     end
@@ -64,22 +64,23 @@ flowchart TD
 
 ## 快速开始
 
-### 1. 工程初始化
+### 1. 业务消费工程初始化（Consumer Onboarding）
 
-在 Claude Code 等主流 AI 编程工具中发送以下引导提示词：
+在普通工程中引入并消费上游 AI Infra 规范时，向 Claude Code 等主流 AI 编程工具发送以下提示词：
 
 ```markdown
-请阅读并按照 https://github.com/seho-dev/vibe-infra 的规范，将 vibe-infra 作为 Base Infra 初始化到当前工程中：
+请阅读并按照 https://github.com/seho-dev/vibe-infra 的规范，将 vibe-infra 作为 Base Infra 初始化到当前消费端工程中：
 
 1. 确认 https://github.com/seho-dev/vibe-infra 根目录存在合法的 vibe.json 清单文件。
 2. 解析 https://github.com/seho-dev/vibe-infra 的最新发布 Git Tag（若无固定 Tag 则默认解析最新发布的 stable tag）。
 3. 读取并理解 Base Infra 对应 Tag 的 README.md，明确 vibe-infra 的定位、规范与运行机制（注意：README 仅作为背景认知输入，严禁复制到工程中）。
 4. 识别当前工程的 AI 编程工具环境（如 Claude Code 等）；若无法准确判断，主动向我提问确认。
-5. 读取 vibe-infra 的 includes 匹配表达式，将其核心 AI infra 配置（commands/、prompts/ 等）适配并放置到正确的原生配置目录下。
+5. 读取 vibe-infra 的 includes 匹配表达式，将其核心 AI infra 配置（commands/、prompts/ 等）适配并放置到宿主环境对应的原生配置目录下。
 6. 对引入的配置进行供应链安全审查，排查敏感外连与恶意命令。
-7. 在工程根目录下创建 vibe.json，将 Base Infra 声明为基础依赖并锁定解析到的 Tag，确保默认携带 $schema 字段：
+7. 在工程根目录下创建 vibe.json，显式声明 role 为 "consumer"，并将 Base Infra 声明为基础依赖并锁定解析到的 Tag，确保默认携带 $schema 字段：
    {
      "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+     "role": "consumer",
      "infrastructures": {
        "base": {
          "url": "https://github.com/seho-dev/vibe-infra",
@@ -92,14 +93,53 @@ flowchart TD
 10. 完成后输出初始化报告，列出已安装的 AI infra 配置、放置路径、安全审计结论与后续步骤。
 ```
 
-### 2. 核心指令集
+### 2. Infra 提供者仓库初始化（Provider Onboarding）
+
+如果你正在制作、维护或分发一个面向团队的 Infra 规范仓库（需要基于 `base` 扩展并将资产直接平铺在根目录），向 AI 发送以下提示词：
+
+```markdown
+请阅读并按照 https://github.com/seho-dev/vibe-infra 的规范，将当前仓库初始化为一个合规的 Vibe Infra 提供者仓库（Provider Repo），并引入 Base Infra 进行平铺预融合：
+
+1. 确认 https://github.com/seho-dev/vibe-infra 根目录存在合法的 vibe.json 清单文件。
+2. 解析 https://github.com/seho-dev/vibe-infra 的最新发布 Git Tag（默认解析最新 stable tag）。
+3. 读取 Base Infra 对应 Tag 的 README.md 建立规范认知（严禁复制到工程中）。
+4. 识别宿主 AI 编程工具环境；若无法准确判断，主动向我提问确认。
+5. 在当前仓库根目录创建 vibe.json，显式声明 role 为 "provider"，定义当前仓库 name 与 includes 导出表达式，并将 Base Infra 声明为上游依赖：
+   {
+     "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+     "role": "provider",
+     "name": "<your-infra-name>",
+     "description": "<your-infra-description>",
+     "includes": [
+       "AGENTS.md",
+       "skills/**/*.md",
+       "commands/**/*.md",
+       "prompts/**/*.md"
+     ],
+     "excludes": [
+       "README*.md",
+       "LICENSE"
+     ],
+     "infrastructures": {
+       "base": {
+         "url": "https://github.com/seho-dev/vibe-infra",
+         "version": "latest"
+       }
+     }
+   }
+6. 执行提供者模式平铺同步：将 Base 提供的核心资产（commands/、prompts/ 等）直接平铺融合在当前仓库根目录外层，供后续打包发布，严禁生成多层嵌套目录。
+7. 在根目录生成初始的 vibe.lock 记录 Base 解析的 commit SHA。
+8. 完成后输出初始化报告，列出根目录导出的平铺配置及后续发布建议。
+```
+
+### 3. 核心指令集
 
 初始化完成后，工程支持以下生命周期指令：
 
 | 指令 | 阶段动作 | 说明 |
 | :--- | :--- | :--- |
 | **`/vibe-add [url]@[tag]`** | 读取目标与 Base Tag README ➔ 审计 ➔ 语义融合 ➔ 记录 Lock | 引入新的 Infra 依赖（例如团队 Go 规约、前端规范）。 |
-| **`/vibe-sync`** | 读取 Base Tag README ➔ 遍历跨版本 Release ➔ 累积 Diff 合并 | 同步上游更新，无损整合新增范式并处理废弃项。 |
+| **`/vibe-sync`** | 读取 Base Tag README ➔ 遍历跨版本 Release ➔ 累积 Diff 合并 | 同步上游更新；消费端更新至宿主目录，提供者直接平铺更新至外层。 |
 | **`/vibe-remove [name]`** | 读取 Base Tag README ➔ 锚定 Commit 基线 ➔ 语义减法剥离 | 注销指定依赖，安全清理关联配置并保留本地扩展。 |
 
 ---
@@ -111,6 +151,7 @@ flowchart TD
 | 规范条目 | 约束要求 | 技术边界 |
 | :--- | :--- | :--- |
 | **清单准入 (Manifest Gatekeeper)** | 目标仓库根目录必须提供有效的 `vibe.json`。 | 缺少清单则强制终止操作，杜绝非法仓库抓取。 |
+| **角色区分 (Explicit Role)** | `vibe.json` 中显式通过 `role` 声明 `"consumer"` 或 `"provider"`。 | 明确当前工程是应用层消费依赖还是基础层分发规范。 |
 | **Tagged README 认知注入** | 操作前必须读取 Base 与目标仓库在对应 Tag 下的 `README.md`。 | 仅载入 Agent 上下文用于语义理解，**严禁**复制或写入至工程目录。 |
 | **宿主识别与主动提问** | 自动识别主流工具环境；无法确定或存在歧义时强制向用户提问。 | 严禁盲目猜测路径；确保配置落入正确的合规路径。 |
 | **双模归位 (Dual-Mode Placement)** | 消费端归位至宿主目录；Infra 提供者平铺维护外层资产。 | 提供者通过宿主中的指令直接读改根目录的平铺资产，避免多层嵌套。 |
@@ -125,10 +166,11 @@ flowchart TD
 
 ## 配置文件规范
 
-### 1. 工程清单 (`vibe.json`)
+### 1. 消费端工程清单 (`role: "consumer"`)
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+  "role": "consumer",
   "infrastructures": {
     "base": {
       "url": "https://github.com/seho-dev/vibe-infra",
@@ -144,7 +186,33 @@ flowchart TD
 }
 ```
 
-### 2. 语义锁文件 (`vibe.lock`)
+### 2. 提供者仓库清单 (`role: "provider"`)
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+  "role": "provider",
+  "name": "team-go",
+  "description": "团队 Go 工程规范与 AI 扩展指令集",
+  "includes": [
+    "AGENTS.md",
+    "skills/**/*.md",
+    "commands/**/*.md",
+    "prompts/**/*.md"
+  ],
+  "excludes": [
+    "README*.md",
+    "LICENSE"
+  ],
+  "infrastructures": {
+    "base": {
+      "url": "https://github.com/seho-dev/vibe-infra",
+      "version": "latest"
+    }
+  }
+}
+```
+
+### 3. 语义锁文件 (`vibe.lock`)
 记录实际解析的 Commit SHA 作为版本与语义基线：
 ```json
 {
@@ -164,7 +232,7 @@ flowchart TD
 
 ## Infra 仓库发布指南
 
-1. **配置清单 `vibe.json`**：在仓库根目录声明身份标识及 `includes` / `excludes`。
+1. **配置提供者清单 `vibe.json`**：在仓库根目录声明 `role: "provider"`，填写 `name` 及 `includes` / `excludes`。
 2. **上游预融合（可选）**：若继承了基础 Infra，声明依赖后在发布前运行 `/vibe-sync` 平铺融合。此时 Agent 会直接读取并修改仓库根目录的平铺资产。
 3. **推送版本 Tag**：`git tag v1.0.0 && git push origin v1.0.0`。
 4. **发布 GitHub Release（推荐）**：编写 Release Notes，便于下游升级时进行时序语义推导。
@@ -181,9 +249,9 @@ vibe-infra/
 │   └── vibe-remove.md           # /vibe-remove 管道定义
 ├── prompts/
 │   └── shared-concepts.md       # 规范核心公理与协议定义
-├── schema.json                  # vibe.json 校验 Schema
+├── schema.json                  # vibe.json 校验 Schema (定义 role: consumer/provider)
 ├── lockfile.schema.json         # vibe.lock 校验 Schema
-├── vibe.json                    # 本仓库自身声明清单
+├── vibe.json                    # 本仓库自身声明清单 (role: provider)
 ├── LICENSE                      # 开源协议
 ├── README.md                    # 英文规范文档
 └── README.zh-CN.md              # 中文规范文档（本文档）

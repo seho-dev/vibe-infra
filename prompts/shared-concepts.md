@@ -4,16 +4,21 @@
 
 ---
 
-## 1. Manifest Mandate & File Filtering (`vibe.json`)
+## 1. Manifest Mandate & Workspace Role (`vibe.json`)
 
 ```mermaid
 flowchart LR
     TargetRepo["Target Upstream Repo"] --> Check{"Root vibe.json exists?"}
     Check -- No --> Reject["REJECT: Abort all actions, report error"]
-    Check -- Yes --> Parse["Parse includes / excludes expressions"]
+    Check -- Yes --> Role{"Examine role field"}
+    Role -- "consumer" --> C1["Consumer engineering workspace"]
+    Role -- "provider" --> C2["Infrastructure distribution repository"]
 ```
 
 - **Manifest Gatekeeper**: Every valid Vibe Infrastructure repository **MUST** define a `vibe.json` at its root. If missing, the AI **MUST REJECT** all operations.
+- **Explicit Role Property (`role`)**:
+  - `"consumer"`: Identifies a downstream business engineering workspace consuming AI infra packages.
+  - `"provider"`: Identifies an infrastructure author repository publishing and distributing Prompts, Skills, and Commands.
 - **Selective Sync**: Only files matching upstream `includes` and not filtered by `excludes` are candidates for synchronization.
 - **Strict Blacklist (Never Copy)**: Even if present upstream, the following **MUST NOT** be copied into consumer workspaces:
   - Repository metadata: `README*.md`, `LICENSE`, `CHANGELOG*.md`
@@ -48,20 +53,20 @@ Mainstream AI programming harnesses (such as Claude Code and other agentic envir
    > 2. Other / Custom (Prompt user to specify directory)
    ```
 
-### 3.2 Dual-Mode Placement (Consumer Project vs. Infra Repository)
-Depending on workspace identity, the Agent operates in one of two modes:
+### 3.2 Dual-Mode Placement (Consumer Project vs. Provider Infra Repo)
+Based on `role` in `vibe.json` (or detected authoring manifest):
 
 ```mermaid
 flowchart TD
-    Mode{"Workspace Role?"}
-    Mode -- "Consumer Project" --> C1["Route assets into host harness native directories (.claude/...)"]
-    Mode -- "Infra Author / Repo" --> C2["Use host harness commands to read/modify flat root assets directly (commands/, prompts/, skills/)"]
+    Mode{"vibe.json role"}
+    Mode -- "consumer" --> C1["Consumer Mode: Route assets into host harness native directories (.claude/...)"]
+    Mode -- "provider" --> C2["Provider Mode: Use host harness commands to read/modify flat root assets directly (commands/, prompts/, skills/)"]
 ```
 
-- **Consumer Project Mode**: AI infra assets from upstreams are mapped and placed directly into the native directory of the host harness (e.g. `.claude/commands/`, `.claude/skills/`).
-- **Infra Repository Mode (Authoring / Pre-Fusion)**:
-  - An Infra repository defines its distribution assets flatly at root (e.g. `commands/`, `skills/`, `prompts/`).
-  - When an infra author extends `base` or fuses upstream capabilities via their host harness, the host harness's active commands/skills read and modify the **outer flat assets directly** (e.g. editing root `commands/` or `prompts/`).
+- **Consumer Mode (`role: "consumer"`)**: AI infra assets from upstreams are mapped and placed directly into the native directory of the host harness (e.g. `.claude/commands/`, `.claude/skills/`).
+- **Provider Mode (`role: "provider"`)**:
+  - The infra repository defines distribution assets flatly at root (e.g. `commands/`, `skills/`, `prompts/`).
+  - When an infra provider author extends `base` or fuses upstream capabilities via their host harness, the host harness's active commands/skills read and modify the **outer flat assets directly** (e.g. editing root `commands/` or `prompts/`).
   - **Zero Synthetic Nesting**: Assets remain flatly structured at root without artificial folders (e.g. `skills/refactor.md`, never `skills/base/refactor.md`).
 - **Zero Format Pollution**: Markdown files **MUST NOT** contain machine template comments or delimiters (e.g., `<!-- vibe-start -->`). Files remain 100% natural Markdown.
 - **Homonymous Fusion**: When multiple sources provide identically named assets, the Agent synthesizes them into a single coherent document.

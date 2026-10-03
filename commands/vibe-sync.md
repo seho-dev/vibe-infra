@@ -21,12 +21,12 @@ flowchart LR
 
 ### Stage 1: State & Harness Resolution
 1. Detect host harness (such as Claude Code or other mainstream agentic tools). If ambiguous, prompt the user to specify their AI tool as required by `shared-concepts.md`.
-2. Determine workspace mode:
-   - **Consumer Mode**: Targeting native harness directories.
-   - **Infra Author Mode**: If current repository is an infra repo (contains authoring `vibe.json`), commands in the harness read and modify outer root assets directly.
-3. Read project root `vibe.json` and `vibe.lock`.
+2. Read project root `vibe.json` and `vibe.lock`.
    - If `vibe.json` is missing: Halt and prompt user to initialize `vibe-infra`.
    - If `vibe.lock` is missing: Treat all entries as initial sync targets.
+3. Determine workspace mode from `vibe.json` `role`:
+   - **Consumer Mode (`role: "consumer"`)**: Targeting native harness directories.
+   - **Provider Mode (`role: "provider"`)**: Commands in the harness read and modify outer root assets directly.
 
 ### Stage 2: Mandatory Cognitive Grounding
 1. **Base Infra README Grounding**: Fetch and read the Base Infra repository's (`seho-dev/vibe-infra`) `README.md` at its declared tag (or resolved latest tag) in `vibe.json` into working context.
@@ -45,7 +45,7 @@ For each declared infrastructure entry:
 4. **Flat Semantic Merge**:
    - Filter files matching upstream `includes` and not excluded by `excludes`.
    - **Single-Instance Rules (`AGENTS.md`)**: Three-way semantic merge; **local business intent and build commands always win**.
-   - **Modular Assets (`skills/`, `commands/`, `prompts/`)**: In consumer mode, place into native harness paths. In infra author mode, update root flat assets directly. Homonymous files are synthesized into unified documents.
+   - **Modular Assets (`skills/`, `commands/`, `prompts/`)**: In consumer mode, place into native harness paths. In provider mode, update root flat assets directly. Homonymous files are synthesized into unified documents.
    - **Deprecations**: Delete untouched obsolete files; prompt user if local customizations exist.
 5. **Dynamic Stack Adaptation**: Resolve placeholders to native project toolchain (e.g. `go test ./...`, `pnpm test`).
 

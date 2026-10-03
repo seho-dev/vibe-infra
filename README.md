@@ -42,8 +42,8 @@ flowchart TD
         LockGen["6. Update Semantic Lockfile (vibe.lock)"]
     end
 
-    subgraph LocalProject ["Consumer Project / Infra Repository"]
-        VibeJson["vibe.json (Dependency Manifest)"]
+    subgraph LocalProject ["Consumer Project (role: consumer) / Provider Repo (role: provider)"]
+        VibeJson["vibe.json (Manifest declaring role)"]
         VibeLock["vibe.lock (Commit Baseline Anchor)"]
         TargetDir["Harness Directory / Outer Flat Assets"]
     end
@@ -64,21 +64,22 @@ flowchart TD
 
 ## Quickstart
 
-### 1. Project Initialization
+### 1. Consumer Project Initialization (Consumer Onboarding)
 
-Provide the following prompt to an active AI Agent (Claude Code or other mainstream agentic tools) in the project root:
+When introducing and consuming upstream AI Infra guidelines into standard projects, send this prompt to an active AI Agent (Claude Code or other mainstream agentic tools):
 
 ```markdown
-Please read and follow the specification at https://github.com/seho-dev/vibe-infra to initialize vibe-infra as the Base Infrastructure for this project:
+Please read and follow the specification at https://github.com/seho-dev/vibe-infra to initialize vibe-infra as the Base Infrastructure for this consumer project:
 
 1. Verify that https://github.com/seho-dev/vibe-infra contains a valid root vibe.json manifest.
 2. Resolve the latest released stable Git Tag from https://github.com/seho-dev/vibe-infra.
 3. Read and understand the Base Infra's README.md at that tag to ground understanding of vibe-infra conventions (Note: read for cognitive context only; never copy into workspace).
 4. Detect the current project's AI host harness environment (e.g., Claude Code); if ambiguous, prompt me to confirm.
 5. Fetch the AI infra configurations matching vibe-infra's includes expressions (commands/, prompts/, etc.) and adapt them into the appropriate native harness directories.
-6. Create a `vibe.json` file in the project root declaring the Base Infrastructure pinned to the resolved tag, ensuring the `$schema` field is always included:
+6. Create a `vibe.json` file in the project root explicitly declaring `role` as "consumer" and Base Infrastructure pinned to the resolved tag, ensuring `$schema` is included:
    {
      "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+     "role": "consumer",
      "infrastructures": {
        "base": {
          "url": "https://github.com/seho-dev/vibe-infra",
@@ -92,14 +93,53 @@ Please read and follow the specification at https://github.com/seho-dev/vibe-inf
 10. Provide an initialization report summarizing the installed AI infra configurations, configuration paths, security audit outcomes, and next steps.
 ```
 
-### 2. Core Commands
+### 2. Infra Provider Repository Initialization (Provider Onboarding)
+
+If authoring, distributing, or maintaining a team/enterprise AI Infra repository (extending `base` and managing assets flatly at root), send this prompt:
+
+```markdown
+Please read and follow the specification at https://github.com/seho-dev/vibe-infra to initialize this repository as a compliant Vibe Infra Provider Repository, importing Base Infra via flat pre-fusion:
+
+1. Verify that https://github.com/seho-dev/vibe-infra contains a valid root vibe.json manifest.
+2. Resolve the latest released stable Git Tag from https://github.com/seho-dev/vibe-infra.
+3. Read the Base Infra README.md at that tag for cognitive grounding (never copy into workspace).
+4. Detect the host AI programming harness; if ambiguous, prompt me to confirm.
+5. Create a `vibe.json` file in the repository root explicitly declaring `role` as "provider", defining repository `name` and exported `includes` patterns, and declaring Base Infra as upstream:
+   {
+     "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+     "role": "provider",
+     "name": "<your-infra-name>",
+     "description": "<your-infra-description>",
+     "includes": [
+       "AGENTS.md",
+       "skills/**/*.md",
+       "commands/**/*.md",
+       "prompts/**/*.md"
+     ],
+     "excludes": [
+       "README*.md",
+       "LICENSE"
+     ],
+     "infrastructures": {
+       "base": {
+         "url": "https://github.com/seho-dev/vibe-infra",
+         "version": "latest"
+       }
+     }
+   }
+6. Perform provider flat pre-fusion: place Base distribution assets (commands/, prompts/, etc.) directly flat at the repository root for distribution, avoiding synthetic subfolders.
+7. Generate initial `vibe.lock` recording Base's resolved commit SHA.
+8. Output an initialization report summarizing the exported root assets and release guidelines.
+```
+
+### 3. Core Commands
 
 Once initialized, the following commands manage the infrastructure lifecycle:
 
 | Command | Action | Description |
 | :--- | :--- | :--- |
 | **`/vibe-add [url]@[tag]`** | Read Target & Base Tag READMEs ➔ Audit ➔ Semantic Fusion ➔ Update Lock | Introduce a new infrastructure dependency. |
-| **`/vibe-sync`** | Read Base Tag README ➔ Sequential Release Traversal ➔ Cumulative Diff Merge | Synchronize upstream updates, integrating changes while handling deprecations. |
+| **`/vibe-sync`** | Read Base Tag README ➔ Sequential Release Traversal ➔ Cumulative Diff Merge | Synchronize upstream updates; updates harness paths in consumer mode, flat root assets in provider mode. |
 | **`/vibe-remove [name]`** | Read Base Tag README ➔ Reference Commit Baseline ➔ Semantic Subtraction | Deregister dependency, safely pruning related clauses while preserving local edits. |
 
 ---
@@ -111,6 +151,7 @@ All command executions strictly adhere to the standards formulated in **[prompts
 | Axiom | Requirement | Technical Boundary |
 | :--- | :--- | :--- |
 | **Manifest Gatekeeper** | Target repositories must provide a root `vibe.json`. | Missing manifests trigger immediate abortion; prevents arbitrary repository scraping. |
+| **Explicit Workspace Role** | Manifests declare `role` as `"consumer"` or `"provider"`. | Disambiguates whether the workspace consumes packages or exports distribution assets. |
 | **Tagged README Ingestion** | Ingest Base and target repository `README.md` at declared Tag before execution. | Ingested into Agent working memory for context only; **never** copied into workspace files. |
 | **Harness Resolution & Inquiry** | Automatically detects mainstream harnesses; queries user if ambiguous. | Eliminates guesswork; guarantees files land in canonical directories. |
 | **Dual-Mode Placement** | Consumers map to harness folders; Infra authors edit outer flat assets directly. | Infra authors run harness commands to maintain root assets flatly without synthetic folder nesting. |
@@ -125,10 +166,11 @@ All command executions strictly adhere to the standards formulated in **[prompts
 
 ## Configuration File Formats
 
-### 1. Project Manifest (`vibe.json`)
+### 1. Consumer Project Manifest (`role: "consumer"`)
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+  "role": "consumer",
   "infrastructures": {
     "base": {
       "url": "https://github.com/seho-dev/vibe-infra",
@@ -144,7 +186,33 @@ All command executions strictly adhere to the standards formulated in **[prompts
 }
 ```
 
-### 2. Semantic Lockfile (`vibe.lock`)
+### 2. Provider Infra Manifest (`role: "provider"`)
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+  "role": "provider",
+  "name": "team-go",
+  "description": "Team Go coding conventions and AI commands",
+  "includes": [
+    "AGENTS.md",
+    "skills/**/*.md",
+    "commands/**/*.md",
+    "prompts/**/*.md"
+  ],
+  "excludes": [
+    "README*.md",
+    "LICENSE"
+  ],
+  "infrastructures": {
+    "base": {
+      "url": "https://github.com/seho-dev/vibe-infra",
+      "version": "latest"
+    }
+  }
+}
+```
+
+### 3. Semantic Lockfile (`vibe.lock`)
 Records resolved commit SHAs as semantic baselines without hash lists:
 ```json
 {
@@ -164,7 +232,7 @@ Records resolved commit SHAs as semantic baselines without hash lists:
 
 ## Authoring & Publishing an Infra Repository
 
-1. **Define Root Manifest (`vibe.json`)**: Declare repository identity and `includes` / `excludes`.
+1. **Define Root Manifest (`vibe.json`)**: Declare `role: "provider"`, repository `name`, and `includes` / `excludes`.
 2. **Pre-Fuse Upstream (Optional)**: If extending `base`, declare it and run `/vibe-sync` before release tagging. The Agent reads and updates root flat assets directly.
 3. **Publish Git Tag**: `git tag v1.0.0 && git push origin v1.0.0`.
 4. **Publish GitHub Release (Recommended)**: Provide Release Notes to guide downstream semantic merges.
@@ -181,9 +249,9 @@ vibe-infra/
 │   └── vibe-remove.md           # /vibe-remove pipeline definition
 ├── prompts/
 │   └── shared-concepts.md       # Core axioms and protocols specification
-├── schema.json                  # JSON Schema validating vibe.json
+├── schema.json                  # JSON Schema validating vibe.json (declares role: consumer/provider)
 ├── lockfile.schema.json         # JSON Schema validating vibe.lock
-├── vibe.json                    # Base Infra declaration manifest
+├── vibe.json                    # Base Infra declaration manifest (role: provider)
 ├── LICENSE                      # MIT License
 ├── README.md                    # English documentation (This document)
 └── README.zh-CN.md              # Chinese documentation
