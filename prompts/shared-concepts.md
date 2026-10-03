@@ -234,5 +234,16 @@ Automatically maintained by the Agent to record resolved concrete Git Tags and c
 ### 9.4 Infra Repository Authoring & Publishing Workflow
 1. **Define Manifest**: Create root `vibe.json` with `role: "provider"`, `name`, and `includes` / `excludes`.
 2. **Upstream Pre-Fusion (Optional)**: If extending `base`, run `/vibe-sync` before publishing; the Agent updates outer root flat assets directly.
-3. **Publish Git Tag**: Tag the release (e.g. `git tag v1.0.0 && git push origin v1.0.0`).
-4. **Publish GitHub Release (Recommended)**: Provide Release Notes to empower downstream sequential traversal during upgrades.
+3. **Automated CI Release Workflow (Recommended)**:
+   - Infra providers can adopt the standard GitHub Release workflow (`.github/workflows/release.yml` and `.releaserc.json` from `vibe-infra`).
+   - **Trigger Conditions**:
+     * Push to `main` branch with commit message starting with `release` or `Release` (e.g., `release: v1.0.0`).
+     * Manual dispatch via GitHub Actions `workflow_dispatch` (supports `dry_run: true` to preview release notes without publishing).
+   - **Semantic Versioning Rules**:
+     * Breaking changes (`BREAKING CHANGE` or breaking notes) ➔ **Major** release (e.g., `v1.0.0` -> `v2.0.0`).
+     * `feat` commits ➔ **Minor** release (e.g., `v1.0.0` -> `v1.1.0`).
+     * `fix` or other commit messages ➔ **Patch** release (e.g., `v1.0.0` -> `v1.0.1`).
+   - **Automated Outputs**: Creates Git Tag (e.g., `v1.0.1`), compiles Release Notes from commit history, and publishes GitHub Release.
+4. **Manual Tag & Release (Alternative)**:
+   - Tag the release: `git tag v1.0.0 && git push origin v1.0.0`.
+   - Publish a GitHub Release with Release Notes to empower downstream sequential traversal during upgrades.

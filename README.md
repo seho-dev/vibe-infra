@@ -129,7 +129,16 @@ Please read and follow the specification at https://github.com/seho-dev/vibe-inf
    }
 6. Perform provider flat pre-fusion: place Base distribution assets (commands/, prompts/, etc.) directly flat at the repository root for distribution, avoiding synthetic subfolders.
 7. Generate initial `vibe.lock` recording Base's concrete resolved tag and commit SHA.
-8. Output an initialization report summarizing the exported root assets and release guidelines.
+8. Prompt the user whether to configure a GitHub Release CI workflow to enable automated, standardized version publishing:
+   - Explain the release rules and operational mechanisms to the user:
+     * **Triggers**: Pushes to `main` branch with commit messages starting with `release` or `Release` (e.g., `release: v1.0.0`), or manual execution via GitHub Actions `workflow_dispatch` (supports `dry_run: true` to preview version and Release Notes without publishing).
+     * **Semantic Versioning Rules** (powered by semantic-release):
+       - Breaking changes (commits containing `BREAKING CHANGE` or breaking notes): Triggers **Major** version release (e.g., `v1.0.0` -> `v2.0.0`).
+       - Feature additions (commits starting with `feat`): Triggers **Minor** version release (e.g., `v1.0.0` -> `v1.1.0`).
+       - Bug fixes (commits starting with `fix`) or other general commits: Triggers **Patch** version release (e.g., `v1.0.0` -> `v1.0.1`).
+     * **Release Artifacts**: Automatically calculates next version, creates Git Tag (e.g., `v1.0.1`), compiles Release Notes from commit history, and publishes GitHub Release.
+   - If confirmed by the user, copy `.github/workflows/release.yml` (and companion `.releaserc.json`) from the vibe-infra repository into the target repo's `.github/workflows/release.yml` (and `.releaserc.json` in the root).
+9. Output an initialization report summarizing the exported root assets, CI workflow status, and release guidelines.
 ```
 
 ### 3. Core Commands Cheat Sheet
@@ -163,6 +172,10 @@ All normative axioms, dual-mode placement mechanics, sequential traversal protoc
 
 ```text
 vibe-infra/
+├── .github/
+│   └── workflows/
+│       └── release.yml          # GitHub Release automation workflow
+├── .releaserc.json              # Semantic-release rules configuration
 ├── commands/
 │   ├── vibe-sync.md             # /vibe-sync pipeline definition
 │   ├── vibe-add.md              # /vibe-add pipeline definition

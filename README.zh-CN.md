@@ -129,7 +129,16 @@ flowchart TD
    }
 6. 执行提供者模式平铺同步：将 Base 提供的核心资产（commands/、prompts/ 等）直接平铺融合在当前仓库根目录外层，供后续打包发布，严禁生成多层嵌套目录。
 7. 在根目录生成初始的 vibe.lock 记录 Base 解析的 concrete Tag 与 commit SHA。
-8. 完成后输出初始化报告，列出根目录导出的平铺配置及后续发布建议。
+8. 询问用户是否添加 GitHub Release CI 工作流（Workflow）以辅助自动化发布版本：
+   - 向用户清晰说明发布版本规则与运行机制：
+     * **触发方式**：向 `main` 分支推送且提交信息以 `release` 或 `Release` 开头（如 `release: v1.0.0`），或通过 GitHub Actions 的 `workflow_dispatch` 手动触发（支持设置 `dry_run: true` 仅预览版本与 Release Notes 而不真正发布）。
+     * **版本计算规则**（基于 semantic-release 语义化提交）：
+       - 破坏性变更（提交含 `BREAKING CHANGE` 或 breaking 说明）：自动发布 **Major** 版本（例如 `v1.0.0` -> `v2.0.0`）；
+       - 功能新增（提交以 `feat` 开头）：自动发布 **Minor** 版本（例如 `v1.0.0` -> `v1.1.0`）；
+       - 问题修复（提交以 `fix` 开头）或其他常规提交：自动发布 **Patch** 版本（例如 `v1.0.0` -> `v1.0.1`）。
+     * **发布产物**：自动计算新版本号、生成 Git Tag、生成 Release Notes 并发布 GitHub Release。
+   - 若用户同意，将 vibe-infra 当前仓库下的 `.github/workflows/release.yml`（以及配套的 `.releaserc.json`）复制到当前仓库对应的 `.github/workflows/release.yml`（及根目录 `.releaserc.json`）。
+9. 完成后输出初始化报告，列出根目录导出的平铺配置、CI 工作流配置情况及后续发布建议。
 ```
 
 ### 3. 日常指令速查
@@ -163,6 +172,10 @@ flowchart TD
 
 ```text
 vibe-infra/
+├── .github/
+│   └── workflows/
+│       └── release.yml          # GitHub Release 自动发布工作流
+├── .releaserc.json              # 语义化发布规则配置
 ├── commands/
 │   ├── vibe-sync.md             # /vibe-sync 管道定义
 │   ├── vibe-add.md              # /vibe-add 管道定义
