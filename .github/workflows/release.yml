@@ -7,6 +7,9 @@ on:
         description: Preview version and Release Notes only, not actually released
         type: boolean
         default: false
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -17,7 +20,7 @@ concurrency:
 
 jobs:
   release:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'release') || startsWith(github.event.head_commit.message, 'Release'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -30,5 +33,9 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DRY_RUN: ${{ inputs.dry_run }}
-        run: npx --yes semantic-release@25.0.9 --dry-run="$DRY_RUN"
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npx --yes semantic-release@25.0.9 --dry-run
+          else
+            npx --yes semantic-release@25.0.9
+          fi
