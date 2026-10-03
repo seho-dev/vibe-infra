@@ -154,3 +154,77 @@ Every command **MUST** conclude with this concise structured report:
 - **Inquiries Handled**: [Summary or "None (Clean run)"]
 - **Recommended Next Steps**: Review with `git diff`.
 ```
+
+---
+
+## 9. Manifest Specifications & Authoring Guide
+
+### 9.1 Consumer Project Manifest (`role: "consumer"`)
+Placed at project root to declare consumed AI infra dependencies:
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+  "role": "consumer",
+  "infrastructures": {
+    "base": {
+      "url": "https://github.com/seho-dev/vibe-infra",
+      "version": "latest"
+    },
+    "team-go": {
+      "url": "https://github.com/example-org/team-go-infra.git",
+      "version": "v0.2.1",
+      "includes": ["skills/**/*.md"],
+      "excludes": ["skills/legacy-*.md"]
+    }
+  }
+}
+```
+
+### 9.2 Provider Infra Manifest (`role: "provider"`)
+Placed at root of infrastructure repository distributing Prompts, Skills, and Commands:
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/schema.json",
+  "role": "provider",
+  "name": "team-go",
+  "description": "Team Go coding conventions and AI commands",
+  "includes": [
+    "AGENTS.md",
+    "skills/**/*.md",
+    "commands/**/*.md",
+    "prompts/**/*.md"
+  ],
+  "excludes": [
+    "README*.md",
+    "LICENSE"
+  ],
+  "infrastructures": {
+    "base": {
+      "url": "https://github.com/seho-dev/vibe-infra",
+      "version": "latest"
+    }
+  }
+}
+```
+
+### 9.3 Semantic Lockfile (`vibe.lock`)
+Automatically maintained by the Agent to record resolved commit SHAs as semantic baselines:
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/seho-dev/vibe-infra/main/lockfile.schema.json",
+  "updatedAt": "2026-10-02T12:00:00Z",
+  "infrastructures": {
+    "base": {
+      "url": "https://github.com/seho-dev/vibe-infra",
+      "version": "v1.0.0",
+      "resolvedCommit": "a1b2c3d4e5f6..."
+    }
+  }
+}
+```
+
+### 9.4 Infra Repository Authoring & Publishing Workflow
+1. **Define Manifest**: Create root `vibe.json` with `role: "provider"`, `name`, and `includes` / `excludes`.
+2. **Upstream Pre-Fusion (Optional)**: If extending `base`, run `/vibe-sync` before publishing; the Agent updates outer root flat assets directly.
+3. **Publish Git Tag**: Tag the release (e.g. `git tag v1.0.0 && git push origin v1.0.0`).
+4. **Publish GitHub Release (Recommended)**: Provide Release Notes to empower downstream sequential traversal during upgrades.
